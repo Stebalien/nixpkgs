@@ -28,6 +28,10 @@
   the firewall.  However, if the reloading fails, the ‘firewall-stop’
   script will be called which in return will effectively disable the
   complete firewall (in the default configuration).
+
+  - ‘nixos-out’ is used to track outbound packets. At the moment, it's
+  only used to track outbound SSDP requests so we can accept SSDP
+  replies.
 */
 {
   config,
@@ -60,11 +64,17 @@ let
   startScript = writeShScript "firewall-start" ''
     ${helpers}
 
+    ${lib.optionalString cfg.allowSSDP ''
+      ipset -exist create ssdp-reply-v4 hash:ip,port family inet timeout 5
+      ipset -exist create ssdp-reply-v6 hash:ip,port family inet6 timeout 5
+    ''}
+
     # Flush the old firewall rules.  !!! Ideally, updating the
     # firewall would be atomic.  Apparently that's possible
     # with iptables-restore.
     ip46tables -D INPUT -j nixos-fw 2> /dev/null || true
-    for chain in nixos-fw nixos-fw-accept nixos-fw-log-refuse nixos-fw-refuse; do
+    ip46tables -D OUTPUT -j nixos-out 2> /dev/null || true
+    for chain in nixos-fw nixos-fw-accept nixos-fw-log-refuse nixos-fw-refuse nixos-out; do
       ip46tables -F "$chain" 2> /dev/null || true
       ip46tables -X "$chain" 2> /dev/null || true
     done
@@ -114,6 +124,17 @@ let
     ''}
     ip46tables -A nixos-fw-log-refuse -j nixos-fw-refuse
 
+    # Setup the "nixos-out" chain.
+    ip46tables -N nixos-out
+
+    ${lib.optionalString cfg.allowSSDP ''
+      # Track outbound SSDP packets so we can receive replies.
+      iptables -A nixos-out -d 239.255.255.250 -p udp -m udp --dport 1900 -j SET --add-set ssdp-reply-v4 src,src --exist
+      ip6tables -A nixos-out -d ff02::c,ff05::c,ff08::c,ff0e::c -p udp -m udp --dport 1900 -j SET --add-set ssdp-reply-v6 src,src --exist
+    ''}
+
+    ip46tables -A nixos-out -j ACCEPT
+    ip46tables -A OUTPUT -j nixos-out
 
     # The "nixos-fw" chain does the actual work.
     ip46tables -N nixos-fw
@@ -212,6 +233,21 @@ let
         ) cfg.allowedUDPPortRanges
       ) cfg.allInterfaces
     )}
+
+    ${lib.optionalString cfg.allowSSDP ''
+      # Allow inbound SSDP queries
+      iptables -A nixos-fw -p udp -p udp -d 239.255.255.250 -dport 1900 -j nixos-fw-accept
+      ip6tables -A nixos-fw -p udp -p udp -d ff02::c,ff05::c,ff08::c,ff0e::c -dport 1900 -j nixos-fw-accept
+
+      # Allow SSDP replies
+      iptables -A nixos-fw -p udp -m set --match-set ssdp-reply-v4 dst,dst -j nixos-fw-accept
+      ip6tables -A nixos-fw -p udp -m set --match-set ssdp-reply-v6 dst,dst -j nixos-fw-accept
+    ''}
+
+    ${lib.optionalString cfg.allowMDNS ''
+      iptables -A nixos-fw -p udp -d 224.0.0.251 --dport 5353 -j nixos-fw-accept
+      ip6tables -A nixos-fw -p udp -d ff02::fb --dport 5353 -j nixos-fw-accept
+    ''}
 
     # Optionally respond to ICMPv4 pings.
     ${lib.optionalString cfg.allowPing ''

@@ -198,6 +198,22 @@ in
         '';
       };
 
+      allowSSDP = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = ''
+          Whether to allow local network service discovery via SSDP.
+        '';
+      };
+
+      allowMDNS = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = ''
+          Whether to allow local network service discovery via mDNS.
+        '';
+      };
+
       checkReversePath = lib.mkOption {
         type = lib.types.either lib.types.bool (
           lib.types.enum [

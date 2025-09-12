@@ -90,6 +90,17 @@ in
         auto-merge
       }
 
+      ${lib.optionalString cfg.allowSSDP ''
+        set ssdp-reply-v4 {
+            type ipv4_addr . inet_service
+            timeout 5s
+        }
+        set ssdp-reply-v6 {
+            type ipv6_addr . inet_service
+            timeout 5s
+        }
+      ''}
+
       ${lib.optionalString (cfg.checkReversePath != false) ''
         chain rpfilter {
           type filter hook prerouting priority mangle + 10; policy drop;
@@ -167,6 +178,21 @@ in
 
         meta l4proto . th dport @temp-ports accept
 
+        ${lib.optionalString cfg.allowSSDP ''
+          # Allow inbound SSDP M-SEARCH broadcasts
+          ip daddr 239.255.255.250 udp dport 1900 accept comment "Allow inbound SSDP queries"
+          ip6 daddr {ff02::c, ff05::c, ff08::c, ff0e::c} accept comment "Allow SSDP queries"
+
+          # Allow SSDP replies
+          ip daddr . udp dport @ssdp-reply-v4 accept comment "Allow SSDP replies"
+          ip6 daddr . udp dport @ssdp-reply-v6 accept comment "Allow SSDP replies"
+        ''}
+
+        ${lib.optionalString cfg.allowMDNS ''
+          udp dport mdns ip6 daddr ff02::fb accept comment "Allow IPv6 mDNS"
+          udp dport mdns ip daddr 224.0.0.251 accept comment "Allow IPv4 mDNS"
+        ''}
+
         ${lib.optionalString cfg.allowPing ''
           icmp type echo-request ${
             lib.optionalString (cfg.pingLimit != null) "limit rate ${cfg.pingLimit}"
@@ -178,6 +204,15 @@ in
 
         ${cfg.extraInputRules}
 
+      }
+
+      chain output {
+        type filter hook output priority filter; policy accept;
+
+        ${lib.optionalString cfg.allowSSDP ''
+          ip daddr 239.255.255.250 udp dport 1900 set add ip saddr . udp sport @ssdp-reply-v4 comment "Record outbound IPv4 SSDP request"
+          ip6 daddr {FF02::C, FF05::C, FF08::C, FF0E::C} udp dport 1900 set add ip saddr . udp sport @ssdp-reply-v6 comment "Record outbound IPv6 SSDP request"
+        ''}
       }
 
       ${lib.optionalString cfg.filterForward ''

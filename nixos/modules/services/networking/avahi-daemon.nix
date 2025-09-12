@@ -405,6 +405,6 @@ in
     services.dbus.enable = true;
     services.dbus.packages = [ cfg.package ];
 
-    networking.firewall.allowedUDPPorts = lib.mkIf cfg.openFirewall [ 5353 ];
+    networking.firewall.allowMDNS = lib.mkIf cfg.openFirewall true;
   };
 }

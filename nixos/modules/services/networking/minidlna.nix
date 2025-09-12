@@ -111,8 +111,10 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    networking.firewall.allowedTCPPorts = lib.mkIf cfg.openFirewall [ cfg.settings.port ];
-    networking.firewall.allowedUDPPorts = lib.mkIf cfg.openFirewall [ 1900 ];
+    networking.firewall = lib.mkIf cfg.openFirewall {
+      allowedTCPPorts = [ cfg.settings.port ];
+      allowSSDP = true;
+    };
 
     users.groups.minidlna.gid = config.ids.gids.minidlna;
     users.users.minidlna = {

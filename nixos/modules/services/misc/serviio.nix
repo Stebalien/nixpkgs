@@ -90,9 +90,8 @@ in
         23423 # console
         23424 # mediabrowser
       ];
-      allowedUDPPorts = [
-        1900 # UPnP service discovery
-      ];
+      # UPnP service discovery
+      allowSSDP = true;
     };
   };
 }

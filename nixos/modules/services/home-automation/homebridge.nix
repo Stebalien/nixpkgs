@@ -422,12 +422,12 @@ in
       }
     ];
 
-    networking.firewall = {
-      allowedTCPPorts = lib.mkIf cfg.openFirewall [
+    networking.firewall = lib.mkIf cfg.openFirewall {
+      allowedTCPPorts = [
         cfg.settings.bridge.port
         cfg.uiSettings.port
       ];
-      allowedUDPPorts = lib.mkIf cfg.openFirewall [ 5353 ];
+      allowMDNS = true;
     };
   };
 }

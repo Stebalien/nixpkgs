@@ -501,9 +501,9 @@ in
         8920
       ];
       allowedUDPPorts = [
-        1900
         7359
       ];
+      allowSSDP = true;
     };
 
   };

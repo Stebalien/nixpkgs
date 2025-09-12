@@ -208,13 +208,13 @@ in
         32469
       ];
       allowedUDPPorts = [
-        1900
-        5353
         32410
         32412
         32413
         32414
       ];
+      allowMDNS = true;
+      allowSSDP = true;
     };
 
     users.users = lib.mkIf (cfg.user == "plex") {

@@ -92,11 +92,11 @@ in
 
       ${lib.optionalString cfg.allowSSDP ''
         set ssdp-reply-v4 {
-            type ipv4_addr . inet_service
+            type inet_service . ipv4_addr
             timeout 5s
         }
         set ssdp-reply-v6 {
-            type ipv6_addr . inet_service
+            type inet_service . ipv6_addr
             timeout 5s
         }
       ''}
@@ -180,12 +180,12 @@ in
 
         ${lib.optionalString cfg.allowSSDP ''
           # Allow inbound SSDP M-SEARCH broadcasts
-          ip daddr 239.255.255.250 udp dport 1900 accept comment "Allow inbound SSDP queries"
-          ip6 daddr {ff02::c, ff05::c, ff08::c, ff0e::c} accept comment "Allow SSDP queries"
+          udp dport 1900 ip daddr 239.255.255.250 accept comment "Allow inbound SSDP queries"
+          udp dport 1900 ip6 daddr {ff02::c, ff05::c, ff08::c, ff0e::c} accept comment "Allow SSDP queries"
 
           # Allow SSDP replies
-          ip daddr . udp dport @ssdp-reply-v4 accept comment "Allow SSDP replies"
-          ip6 daddr . udp dport @ssdp-reply-v6 accept comment "Allow SSDP replies"
+          udp dport . ip daddr @ssdp-reply-v4 accept comment "Allow SSDP replies"
+          udp dport . ip6 daddr @ssdp-reply-v6 accept comment "Allow SSDP replies"
         ''}
 
         ${lib.optionalString cfg.allowMDNS ''
@@ -210,8 +210,8 @@ in
         type filter hook output priority filter; policy accept;
 
         ${lib.optionalString cfg.allowSSDP ''
-          ip daddr 239.255.255.250 udp dport 1900 set add ip saddr . udp sport @ssdp-reply-v4 comment "Record outbound IPv4 SSDP request"
-          ip6 daddr {FF02::C, FF05::C, FF08::C, FF0E::C} udp dport 1900 set add ip saddr . udp sport @ssdp-reply-v6 comment "Record outbound IPv6 SSDP request"
+          udp dport 1900 ip daddr 239.255.255.250 set add udp sport . ip saddr @ssdp-reply-v4 comment "Record outbound IPv4 SSDP request"
+          udp dport 1900 ip6 daddr {FF02::C, FF05::C, FF08::C, FF0E::C} set add udp sport . ip6 saddr @ssdp-reply-v6 comment "Record outbound IPv6 SSDP request"
         ''}
       }
 

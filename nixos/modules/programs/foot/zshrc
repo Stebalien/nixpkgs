@@ -1,3 +1,11 @@
+# Only modify the prompt if run interactively...
+[[ $- == *i* ]] || return 0
+
+# ... and inside foot.
+case "$TERM" in
+  foot*) : ;;
+esac
+
 function osc7-pwd() {
     emulate -L zsh # also sets localoptions for us
     setopt extendedglob

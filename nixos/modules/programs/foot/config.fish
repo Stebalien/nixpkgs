@@ -1,3 +1,7 @@
+if ! status --is-interactive && string match -q "foot*" "$TERM"
+  return
+end
+
 function update_cwd_osc --on-variable PWD --description 'Notify terminals when $PWD changes'
     if status --is-command-substitution || set -q INSIDE_EMACS
         return
